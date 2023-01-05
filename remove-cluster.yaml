@@ -1,0 +1,48 @@
+---
+- hosts: all
+  become: true
+# remote_user: <USERNAME>
+# To use remove_user instead of -u option, replace 'ansible_user' 
+# with 'remote_user' in this file
+
+  vars_files:
+    - ansible-vars.yaml
+    
+  tasks:
+  - name: kubeadm reset
+    command: kubeadm reset -f
+    
+  - name: remove .kube in home directory
+    file:
+      state: absent
+      path: /home/{{ ansible_user }}/.kube
+
+  - name: remove /etc/cni/net.d
+    file:
+      state: absent
+      path: /etc/cni/net.d
+
+  - name: remove /etc/kubernetes
+    file:
+      state: absent
+      path: /etc/kubernetes
+
+  - name: Unhold kubernetes binary versions
+    dpkg_selections:
+      name: "{{ item }}"
+      selection: deinstall
+    loop:
+      - kubelet
+      - kubeadm
+      - kubectl
+
+  - name: Uninstall Kubernetes binaries
+    apt: 
+      name: "{{ packages }}"
+      state: absent
+      update_cache: yes
+    vars:
+      packages:
+        - kubelet
+        - kubeadm
+        - kubectl

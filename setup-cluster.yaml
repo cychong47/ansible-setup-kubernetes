@@ -1,0 +1,267 @@
+# https://kubernetes.io/blog/2019/03/15/kubernetes-setup-using-ansible-and-vagrant/
+# https://github.com/virtualelephant/vsphere-kubernetes/blob/master/ansible/cilium-install.yml#L57
+# ansible .yml files define what tasks/operations to run
+---
+- hosts: all # run on the "all" hosts category from ansible-hosts.txt
+  # become means be superuser
+  become: true
+# remote_user: <USERNAME>
+# To use remove_user instead of -u option, replace 'ansible_user' 
+# with 'remote_user' in this file
+
+  vars_files:
+    - ansible-vars.yaml
+
+  tasks:
+  - name: Install packages that allow apt to be used over HTTPS
+    apt:
+      name: "{{ packages }}"
+      state: present
+      update_cache: yes
+    vars:
+      packages:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg-agent
+      - software-properties-common
+
+  - name: Change various sysctl-settings
+    sysctl:
+      name: '{{ item.key }}'
+      value: '{{ item.value }}'
+      sysctl_set: yes
+      state: present
+      reload: yes
+      ignoreerrors: yes
+    with_dict: '{{ sysctl_config }}'
+
+#  To have a dedicated file, use this instead of sysctl module
+#  - name: create /etc/sysctl.d/99-kubernetes-cri.conf
+#    copy:
+#      dest: /etc/sysctl.d/99-kubernetes-cri.conf
+#      content: |
+#        net.bridge.bridge-nf-call-iptables = 1
+#        net.ipv4.ip_forward = 1
+#        net.bridge.bridge-nf-call-ip6tables = 1
+
+  - name: create /etc/modules-load.d/containerd.conf
+    copy:
+      dest: /etc/modules-load.d/containerd.conf
+      content: |
+        br_netfilter
+        overlay
+
+  - name: Add an apt signing key for containerd.io
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: Add apt repository for stable version
+    apt_repository:
+      repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable
+      state: present
+
+  - name: Install containerd.io
+    apt: 
+      name: "{{ packages }}"
+      state: present
+      update_cache: yes
+    vars:
+      packages:
+#      - docker-ce 
+#      - docker-ce-cli 
+      - containerd.io
+
+#  - name: verify docker installed, enabled, and started
+#    service:
+#      name: docker
+#      state: started
+#      enabled: yes
+
+#   - name: verify containerd installed, enabled, and started
+#     service:
+#       name: containerd
+#       state: started
+#       enabled: yes
+      
+  - name: recreate containerd config file 
+    shell: |
+      rm -f /etc/containerd/config.toml 
+      containerd config default | tee /etc/containerd/config.toml
+    tags:
+      - setup_containerd
+
+  - name: change SystemdCgorup to true
+    lineinfile:
+      dest: "/etc/containerd/config.toml"
+      regexp: '^.*SystemdCgroup = (.*)$'
+      line: '            SystemdCgroup = true'
+    tags:
+      - setup_containerd
+
+  - name: restart containerd
+    service:
+      name: containerd
+      state: started
+      enabled: yes
+
+  - name: Remove swapfile from /etc/fstab
+    mount:
+      name: "{{ item }}"
+      fstype: swap
+      state: absent
+    with_items:
+      - swap
+      - none
+
+  - name: Disable swap
+    command: swapoff -a
+    when: ansible_swaptotal_mb >= 0
+    
+  - name: Add an apt signing key for Kubernetes
+    apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+  - name: Adding apt repository for Kubernetes
+    apt_repository:
+      repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+      filename: kubernetes.list
+
+  - name: Install Kubernetes binaries
+    apt: 
+      name: "{{ packages }}"
+      state: present
+      update_cache: yes
+    vars:
+      packages:
+        # it is usually recommended to specify which version you want to install
+        - kubelet={{ k8s_ver }}-00
+        - kubeadm={{ k8s_ver }}-00
+        - kubectl={{ k8s_ver }}-00
+        
+  - name: hold kubernetes binary versions (prevent from being updated)
+    dpkg_selections:
+      name: "{{ item }}"
+      selection: hold
+    loop:
+      - kubelet
+      - kubeadm
+      - kubectl
+        
+# this has to do with nodes having different internal/external/mgmt IPs
+# {{ node_ip }} comes from vagrant, which I'm not using yet
+#  - name: Configure node ip - 
+#    lineinfile:
+#      path: /etc/default/kubelet
+#      line: KUBELET_EXTRA_ARGS=--node-ip={{ node_ip }}
+
+  - name: Restart kubelet
+    service:
+      name: kubelet
+      daemon_reload: yes
+      state: restarted
+      
+#  - name: add {{ ansible_user }} user to docker
+#    user:
+#      name: {{ ansible_user }}
+#      group: docker
+  
+  - name: reboot to apply swap disable
+    reboot:
+      reboot_timeout: 180 #allow 3 minutes for reboot to happen
+    
+#  - name: set docker to use systemd cgroups driver
+#    copy:
+#      dest: "/etc/docker/daemon.json"
+#      content: |
+#        {
+#          "exec-opts": ["native.cgroupdriver=systemd"]
+#        }
+#  - name: restart docker
+#    service:
+#      name: docker
+#      state: restarted
+    
+  - name: Initialize Kubernetes cluster
+    command: "kubeadm init --pod-network-cidr {{ pod_cidr }} --v=5"
+    args:
+      creates: /etc/kubernetes/admin.conf # skip this task if the file already exists
+    register: kube_init
+    
+  - name: show kube init info
+    debug:
+      var: kube_init
+      
+  - name: Create .kube directory in user home
+    file:
+      path: "/home/{{ ansible_user }}/.kube"
+      state: directory
+      owner: 1000
+      group: 1000
+
+  - name: Configure .kube/config files in user home
+    copy:
+      src: /etc/kubernetes/admin.conf
+      dest: "/home/{{ ansible_user }}/.kube/config"
+      remote_src: yes
+      owner: 1000
+      group: 1000
+      
+  - name: restart kubelet for config changes
+    service:
+      name: kubelet
+      state: restarted
+      
+  - name: get calico operator
+    get_url:
+      url: https://docs.projectcalico.org/manifests/tigera-operator.yaml
+      #url: https://raw.githubusercontent.com/projectcalico/calico/{{ calico_ver }}/manifests/tigera-operator.yaml
+      dest: "{{ tmp_dir }}/tigera-operator.yaml"
+    tags:
+      - calico
+
+  - name: install calico operator
+    become: no
+    command: kubectl create -f "{{ tmp_dir }}/tigera-operator.yaml"
+    tags:
+      - calico
+
+  - name: get calico networking
+    get_url:
+      url: https://docs.projectcalico.org/manifests/custom-resources.yaml
+      #url: https://raw.githubusercontent.com/projectcalico/calico/{{ calico_ver }}/manifests/custom-resources.yaml
+      dest: "{{ tmp_dir }}/calico-custom-resources.yaml"
+    tags:
+      - test
+
+  - name: replace calico cidr
+    lineinfile:
+      dest: "{{ tmp_dir }}/calico-custom-resources.yaml"
+      regexp: '^.*cidr: (.*)$'
+      line: '      cidr: {{ pod_cidr }}'
+    tags:
+      - test
+  # replace ....
+      
+  - name: apply calico networking
+    become: no
+    command: kubectl create -f "{{ tmp_dir }}/calico-custom-resources.yaml"
+
+  - name: taint 
+    become: no
+    command: kubectl taint nodes --all node-role.kubernetes.io/control-plane-
+    tags:
+      - taint
+    
+    
+      # - name: get dashboard
+      #   get_url:
+      #     url: https://raw.githubusercontent.com/kubernetes/dashboard/v2.5.0/aio/deploy/recommended.yaml
+      #     dest: "{{ tmp_dir }}/dashboard.yaml"
+      #   
+      # - name: apply dashboard
+      #   become: no
+      #   command: kubectl apply -f "{{ tmp_dir }}/dashboard.yaml"

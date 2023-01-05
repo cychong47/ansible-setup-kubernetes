@@ -1,0 +1,10 @@
+install:
+	@echo "Setup kubernetes cluster in vm_0"
+	ansible-playbook \
+		-i ansible-hosts.txt --limit vm_0 \
+		setup-cluster.yaml
+uninstall:
+	@echo "Remove kubernetes cluster from vm_0"
+	ansible-playbook 
+		-i ansible-hosts.txt --limit vm_0 \
+		remove-cluster.yaml

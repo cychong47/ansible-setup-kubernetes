@@ -1,0 +1,14 @@
+# specifying a CIDR for our cluster to use.
+pod_cidr: "10.245.0.0/16"
+# this defines what the join command filename will be
+join_command_location: "join_command.out"
+# setting the home directory for retreiving, saving, and executing files
+tmp_dir: "/tmp"
+# kubernetes version
+k8s_ver: "1.26.0"
+# calico version
+calico_ver: "v3.24.5"
+sysctl_config:
+  net.bridge.bridge-nf-call-iptables: 1
+  net.ipv4.ip_forward: 1
+  net.bridge.bridge-nf-call-ip6tables: 1
