@@ -6,7 +6,7 @@
 # with 'remote_user' in this file
 
   vars_files:
-    - ansible-vars.yaml
+    - vars.yaml
     
   tasks:
   - name: kubeadm reset
