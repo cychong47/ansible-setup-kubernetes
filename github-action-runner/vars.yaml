@@ -1,0 +1,8 @@
+github_config:
+  repo_name: "<REPO_NAME>"
+  username: "<GITHUB_ID>"
+  token: "<TOKEN>"
+  name: "<RUNNER_NAME>"
+  labels: <LABELS>
+# username to login
+username: "<REMOTE_USERNAME"

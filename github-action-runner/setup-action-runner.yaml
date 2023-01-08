@@ -1,0 +1,57 @@
+# https://kubernetes.io/blog/2019/03/15/kubernetes-setup-using-ansible-and-vagrant/
+# https://github.com/virtualelephant/vsphere-kubernetes/blob/master/ansible/cilium-install.yml#L57
+# ansible .yml files define what tasks/operations to run
+---
+- hosts: all # run on the "all" hosts category from ansible-hosts.txt
+  # become means be superuser
+  become: true
+
+  vars_files:
+    - vars.yml
+
+  tasks:
+  - name: Install packages that allow apt to be used over HTTPS
+    apt:
+      name: "{{ packages }}"
+      state: present
+      update_cache: yes
+    vars:
+      packages:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg-agent
+      - software-properties-common
+      - hugo
+      - git
+
+  - name: Install arkade
+    shell: |
+      curl -sLS https://get.arkade.dev | sudo sh
+
+  - name: Install actions-runner with arkade
+    become: no
+    shell: |
+      arkade system install actions-runner
+
+  - name: Configure actions-runner 
+    become: no
+    shell: |
+      cd actions-runner
+      ./config.sh --url https://github.com/{{ github_config.username }}/{{ github_config.repo_name }} --token {{ github_config.token }} --name {{ github_config.name }} --labels {{ github_config.labels }} --work _work --runnergroup default --replace false
+
+  - name: Configure actions-runner as a service
+    shell: |
+      cd /home/{{ ansible_user }}/actions-runner
+      ./svc.sh install
+    tags:
+      - systemd
+
+  - name: Start service 
+    service:
+      name: actions.runner.{{ github_config.username}}-{{ github_config.repo_name}}.{{ github_config.name }}
+      state: started
+      enabled: yes
+    tags: 
+      - systemd
+
