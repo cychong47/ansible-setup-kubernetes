@@ -1,0 +1,13 @@
+install:
+	@echo "Setup media cluster"
+	ansible-playbook \
+		-i ../hosts.txt --limit vm_0 \
+		-u cychong \
+		setup-helm.yaml
+
+uninstall:
+	@echo "Remove: TODO"
+#	ansible-playbook \
+#		-i ../hosts.txt --limit vm_0 \
+#		-u cychong \
+#		remove-cluster.yaml

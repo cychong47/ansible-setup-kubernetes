@@ -1,0 +1,95 @@
+# https://kubernetes.io/blog/2019/03/15/kubernetes-setup-using-ansible-and-vagrant/
+# https://github.com/virtualelephant/vsphere-kubernetes/blob/master/ansible/cilium-install.yml#L57
+# ansible .yml files define what tasks/operations to run
+---
+- hosts: all # run on the "all" hosts category from ansible-hosts.txt
+  # become means be superuser
+  become: false
+# remote_user: <USERNAME>
+# To use remove_user instead of -u option, replace 'ansible_user' 
+# with 'remote_user' in this file
+
+  vars_files:
+    - vars.yaml
+
+  tasks:
+  - name: Print helm repo
+    command: helm repo list
+    register: helm_repo_list_output
+    ignore_errors: true
+    tags:
+      - add_repo
+      - print_repo
+
+  - name: show helm repo list
+    debug:
+      var: helm_repo_list_output
+    tags:
+      - add_repo
+      - print_repo
+
+  - name: Add helm repo
+    kubernetes.core.helm_repository:
+      name: '{{ item.key }}'
+      repo_url: '{{ item.value }}'
+      state: present
+    loop: '{{ helm_repos | dict2items }}'
+    register: helm_repo_list_output
+    tags:
+      - add_repo
+
+  - name: Print helm repo
+    command: helm repo list
+    register: helm_repo_list_output
+    tags:
+      - add_repo
+      - print_repo
+
+  - name: show helm repo list
+    debug:
+      var: helm_repo_list_output
+    tags:
+      - add_repo
+      - print_repo
+
+#  - name: Install helm chart A
+#    kubernetes.core.helm:
+#      name: "{{ item.key }}"
+#      namespace: "{{ item.value.namespace }}"
+#      chart_ref: bitnami/nginx
+#    with_dict: '{{ helm_charts }}'
+#    tags:
+#      - add_helm_chart
+
+  - name: print helm chart info
+    kubernetes.core.helm_info:
+      name: NAME
+      release_namespace: NAMESPACE
+    tags:
+      - print_helm_chart
+
+ 
+  - name: Instal helm plugin helm chart info
+    kubernetes.core.helm_plugin:
+      plugin_path: https://github.com/adamreese/helm-env
+      state: present
+      release_namespace: NAMESPACE
+    tags:
+      - install_helm_plugin
+
+
+#  - name: Gether helm plugin info
+#    kubernetes.core.helm_plugin_info:
+#      release_namespace: NAMESPACE
+#    register: r
+#    tags:
+#      - print_helm_plugin
+#
+#  - name: Print helm plugin info
+#    debug:
+#    msg: "{{ (r.plugin_list | selectattr('name', 'equalto', plugin_name) | list)[0].version }}"
+#    vars:
+#    plugin_name: "env"
+#    tags:
+#      - print_helm_plugin
+

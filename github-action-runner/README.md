@@ -7,7 +7,7 @@
 
 ### Step 2. Configure variables
 ```
-$ vi ansible-vars.yaml
+$ vi vars.yaml
 ```
 
 ### Step 3. Configure deploy target machine 

@@ -1,0 +1,40 @@
+tmp_dir: "/tmp"
+
+# helm repositories
+helm_repos:
+  traefik: "https://helm.traefik.io/traefik"
+  utkuozdemir: "https://utkuozdemir.org/helm-charts"
+  k8s-at-home: "https://k8s-at-home.com/charts"
+  ccy-repo: "https://cychong47.github.io/helm-chart"
+  halkeye : "https://halkeye.github.io/helm-charts"
+  bananaspliff: "https://bananaspliff.github.io/geek-charts"
+  prometheus-community: "https://prometheus-community.github.io/helm-charts"
+  grafana: "https://grafana.github.io/helm-charts"
+
+helm_charts:
+#  blog:
+#    chart: nginx
+#    namespace: default 
+  cert-manager:
+    chart: cert-manager
+    namespace: cert-manager
+  flaresolverr:
+    chart: flaresolverr
+    namespace: media
+  jellyfin:
+    chart: jellyfin
+    namespace: media
+  transmission:
+    chart: transmission
+    namespace: media
+  sonarr:
+    chart: sonarr
+    namespace: media
+  radarr:
+    chart: radarr
+    namespace: media
+  traefik:
+    chart: traefik
+    namespace: traefik
+#  ost             default         1               2022-04-24 17:28:35.444324588 +0900 KST deployed        nginx-0.3.0             1.0        
+#  plantuml        default         1               2022-05-15 23:47:51.23040224 +0900 KST  deployed        plantuml-server-0.1.0   1.16.0     
