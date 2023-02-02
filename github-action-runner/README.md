@@ -40,5 +40,5 @@ REMOTE_USERNAME ALL=(ALL:ALL) NOPASSWD: ALL
 
 ### Step 6. Run an ansible playbok
 ```
-ansible-playbook -i hosts.txt --limit action_runner setup-action-runner.yaml -v
+ansible-playbook -i ../hosts.txt --limit action_runner setup-action-runner.yaml -v
 ```

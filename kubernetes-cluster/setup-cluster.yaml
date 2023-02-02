@@ -10,7 +10,7 @@
 # with 'remote_user' in this file
 
   vars_files:
-    - ansible-vars.yaml
+    - vars.yaml
 
   tasks:
   - name: Install packages that allow apt to be used over HTTPS
