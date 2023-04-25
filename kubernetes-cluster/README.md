@@ -23,19 +23,21 @@ The YAML files are based on [Deploying a Kubernetes Cluster within Proxmox using
 192.168.0.151
 ```
 
-## Change `ansilbe-vars.yaml` if required
+## Change `vars.yaml` if required
 
 ## Setup a cluster
 
 In case installing to every targets listed in `all` section of `hosts.txt`,
+`--ask-become-pass` prompts a password for sudo command
+
 ```
-ansible-playbook -i hosts.txt setup-cluster.yaml
+ansible-playbook -i hosts.txt setup-cluster.yaml --ask-become-pass
 ```
 
 To specify a node from targets, use `--limit` option
 
 ```
-ansible-playbook -i hosts.txt --limit vm_0 -u cychong setup-cluster.yaml
+ansible-playbook -i hosts.txt --limit vm_0 -u cychong setup-cluster.yaml --ask-become-pass
 ```
 
 ## remove the cluster
