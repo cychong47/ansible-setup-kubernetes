@@ -217,8 +217,7 @@
       
   - name: get calico operator
     get_url:
-      url: https://docs.projectcalico.org/manifests/tigera-operator.yaml
-      #url: https://raw.githubusercontent.com/projectcalico/calico/{{ calico_ver }}/manifests/tigera-operator.yaml
+      url: "{{ calico_operator_url }}"
       dest: "{{ tmp_dir }}/tigera-operator.yaml"
     tags:
       - calico
@@ -231,8 +230,7 @@
 
   - name: get calico networking
     get_url:
-      url: https://docs.projectcalico.org/manifests/custom-resources.yaml
-      #url: https://raw.githubusercontent.com/projectcalico/calico/{{ calico_ver }}/manifests/custom-resources.yaml
+      url: "{{ calico_resource_url }}"
       dest: "{{ tmp_dir }}/calico-custom-resources.yaml"
     tags:
       - test

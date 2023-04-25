@@ -7,7 +7,10 @@ tmp_dir: "/tmp"
 # kubernetes version
 k8s_ver: "1.26.0"
 # calico version
-calico_ver: "v3.24.5"
+calico_ver: "v3.25.1"
+# calico operator download url
+calico_operator_url: "https://raw.githubusercontent.com/projectcalico/calico/{{ calico_ver }}/manifests/tigera-operator.yaml"
+calico_resource_url: "https://raw.githubusercontent.com/projectcalico/calico/{{ calico_ver }}/manifests/custom-resources.yaml"
 sysctl_config:
   net.bridge.bridge-nf-call-iptables: 1
   net.ipv4.ip_forward: 1
